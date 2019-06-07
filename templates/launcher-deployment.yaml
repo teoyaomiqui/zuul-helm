@@ -26,13 +26,11 @@ spec:
         name: launcher
         ports:
         - containerPort: 8022
-        resources: {}
         volumeMounts:
         - mountPath: /etc/nodepool/
-          name: launcher-claim0
+          name: nodepool-etc
       restartPolicy: Always
       volumes:
-      - name: launcher-claim0
-        persistentVolumeClaim:
-          claimName: launcher-claim0
-status: {}
+      - name: nodepool-etc
+        configMap:
+          name: nodepool-config

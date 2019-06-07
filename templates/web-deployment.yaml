@@ -18,27 +18,33 @@ spec:
       labels:
         io.kompose.service: web
     spec:
+      initContainers:
+      - args:
+        - sh
+        - -c
+        - /var/playbooks/wait-to-start.sh
+        image: alpine
+        name: init
+        volumeMounts:
+        - mountPath: /var/playbooks/
+          name: wait
       containers:
       - args:
         - sh
         - -c
-        - /var/playbooks/wait-to-start-gearman.sh && zuul-web -d
+        - zuul-web -d
         image: zuul/zuul-web
         name: web
         ports:
         - containerPort: 9000
-        resources: {}
         volumeMounts:
         - mountPath: /etc/zuul/
-          name: web-claim0
-        - mountPath: /var/playbooks/
-          name: web-claim1
+          name: zuul-etc
       restartPolicy: Always
       volumes:
-      - name: web-claim0
-        persistentVolumeClaim:
-          claimName: web-claim0
-      - name: web-claim1
-        persistentVolumeClaim:
-          claimName: web-claim1
-status: {}
+      - name: zuul-etc
+        configMap:
+          name: zuul-config
+      - name: wait
+        configMap:
+          name: wait-script

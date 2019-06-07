@@ -18,40 +18,46 @@ spec:
       labels:
         io.kompose.service: scheduler
     spec:
+      initContainers:
+      - args:
+        - sh
+        - -c
+        - /var/playbooks/wait-to-start.sh
+        image: alpine
+        name: init
+        volumeMounts:
+        - mountPath: /var/playbooks/
+          name: wait
       containers:
       - args:
         - sh
         - -c
-        - /var/playbooks/wait-to-start.sh && zuul-scheduler -d
-        env:
-        - name: http_proxy
-        - name: https_proxy
-        - name: no_proxy
-          value: ',gerrit'
+        - zuul-scheduler -d
+#        env:
+#        - name: http_proxy
+#        - name: https_proxy
+#        - name: no_proxy
+#          value: ',gerrit'
         image: zuul/zuul-scheduler
         name: scheduler
-        resources: {}
         volumeMounts:
         - mountPath: /etc/zuul/
-          name: scheduler-claim0
-        - mountPath: /var/playbooks/
-          name: scheduler-claim1
-        - mountPath: /var/ssh
-          name: sshkey
-        - mountPath: /var/lib/zuul
-          name: scheduler-claim3
+          name: zuul-etc
+#        - mountPath: /var/ssh
+#          name: sshkey
+#        - mountPath: /var/lib/zuul
+#          name: scheduler-claim3
       restartPolicy: Always
       volumes:
-      - name: scheduler-claim0
-        persistentVolumeClaim:
-          claimName: scheduler-claim0
-      - name: scheduler-claim1
-        persistentVolumeClaim:
-          claimName: scheduler-claim1
-      - name: sshkey
-        persistentVolumeClaim:
-          claimName: sshkey
-      - name: scheduler-claim3
-        persistentVolumeClaim:
-          claimName: scheduler-claim3
-status: {}
+      - name: zuul-etc
+        confidMap:
+          name: zuul-config
+      - name: wait
+        configMap:
+          name: wait-script
+#      - name: sshkey
+#        persistentVolumeClaim:
+#          claimName: sshkey
+#      - name: scheduler-claim3
+#        persistentVolumeClaim:
+#          claimName: scheduler-claim3
