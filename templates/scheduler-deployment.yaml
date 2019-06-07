@@ -1,0 +1,57 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f ../docker-compose.yaml
+    kompose.version: 1.18.0 (06a2e56)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: scheduler
+  name: scheduler
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.service: scheduler
+    spec:
+      containers:
+      - args:
+        - sh
+        - -c
+        - /var/playbooks/wait-to-start.sh && zuul-scheduler -d
+        env:
+        - name: http_proxy
+        - name: https_proxy
+        - name: no_proxy
+          value: ',gerrit'
+        image: zuul/zuul-scheduler
+        name: scheduler
+        resources: {}
+        volumeMounts:
+        - mountPath: /etc/zuul/
+          name: scheduler-claim0
+        - mountPath: /var/playbooks/
+          name: scheduler-claim1
+        - mountPath: /var/ssh
+          name: sshkey
+        - mountPath: /var/lib/zuul
+          name: scheduler-claim3
+      restartPolicy: Always
+      volumes:
+      - name: scheduler-claim0
+        persistentVolumeClaim:
+          claimName: scheduler-claim0
+      - name: scheduler-claim1
+        persistentVolumeClaim:
+          claimName: scheduler-claim1
+      - name: sshkey
+        persistentVolumeClaim:
+          claimName: sshkey
+      - name: scheduler-claim3
+        persistentVolumeClaim:
+          claimName: scheduler-claim3
+status: {}

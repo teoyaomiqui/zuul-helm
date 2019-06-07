@@ -1,0 +1,38 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f ../docker-compose.yaml
+    kompose.version: 1.18.0 (06a2e56)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: launcher
+  name: launcher
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.service: launcher
+    spec:
+      containers:
+      - args:
+        - nodepool-launcher
+        - -d
+        image: zuul/nodepool-launcher
+        name: launcher
+        ports:
+        - containerPort: 8022
+        resources: {}
+        volumeMounts:
+        - mountPath: /etc/nodepool/
+          name: launcher-claim0
+      restartPolicy: Always
+      volumes:
+      - name: launcher-claim0
+        persistentVolumeClaim:
+          claimName: launcher-claim0
+status: {}

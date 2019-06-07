@@ -1,0 +1,58 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f ../docker-compose.yaml
+    kompose.version: 1.18.0 (06a2e56)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: executor
+  name: executor
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.service: executor
+    spec:
+      containers:
+      - args:
+        - zuul-executor
+        - -d
+        env:
+        - name: http_proxy
+        - name: https_proxy
+        - name: no_proxy
+          value: ',gerrit,scheduler'
+        image: zuul/zuul-executor
+        name: executor
+        resources: {}
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /etc/zuul/
+          name: executor-claim0
+        - mountPath: /var/playbooks/
+          name: executor-claim1
+        - mountPath: /var/ssh
+          name: sshkey
+        - mountPath: /srv/static/logs
+          name: logs
+      restartPolicy: Always
+      volumes:
+      - name: executor-claim0
+        persistentVolumeClaim:
+          claimName: executor-claim0
+      - name: executor-claim1
+        persistentVolumeClaim:
+          claimName: executor-claim1
+      - name: sshkey
+        persistentVolumeClaim:
+          claimName: sshkey
+      - name: logs
+        persistentVolumeClaim:
+          claimName: logs
+status: {}
