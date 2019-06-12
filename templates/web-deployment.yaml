@@ -21,7 +21,6 @@ spec:
       initContainers:
       - args:
         - sh
-        - -c
         - /var/playbooks/wait-to-start.sh
         image: alpine
         name: init
@@ -40,6 +39,8 @@ spec:
         volumeMounts:
         - mountPath: /etc/zuul/
           name: zuul-etc
+        - mountPath: /var/ssh
+          name: sshkey
       restartPolicy: Always
       volumes:
       - name: zuul-etc
@@ -48,3 +49,6 @@ spec:
       - name: wait
         configMap:
           name: wait-script
+      - name: sshkey
+        secret:
+          secretName: ssh-key

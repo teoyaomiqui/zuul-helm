@@ -6,14 +6,12 @@ metadata:
     kompose.version: 1.18.0 (06a2e56)
   creationTimestamp: null
   labels:
-    io.kompose.service: launcher
-  name: launcher
+    io.kompose.service: scheduler
+  name: scheduler
 spec:
   ports:
-  - name: "8022"
-    port: 8022
-    targetPort: 8022
+  - name: "4730"
+    port: 4730
+    targetPort: 4730
   selector:
-    io.kompose.service: launcher
-status:
-  loadBalancer: {}
+    io.kompose.service: scheduler

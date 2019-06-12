@@ -21,13 +21,14 @@ spec:
       initContainers:
       - args:
         - sh
-        - -c
         - /var/playbooks/wait-to-start.sh
         image: alpine
         name: init
         volumeMounts:
         - mountPath: /var/playbooks/
           name: wait
+        - mountPath: /var/ssh
+          name: sshkey
       containers:
       - args:
         - sh
@@ -43,21 +44,21 @@ spec:
         volumeMounts:
         - mountPath: /etc/zuul/
           name: zuul-etc
-#        - mountPath: /var/ssh
-#          name: sshkey
+        - mountPath: /var/ssh
+          name: sshkey
 #        - mountPath: /var/lib/zuul
 #          name: scheduler-claim3
       restartPolicy: Always
       volumes:
       - name: zuul-etc
-        confidMap:
+        configMap:
           name: zuul-config
       - name: wait
         configMap:
           name: wait-script
-#      - name: sshkey
-#        persistentVolumeClaim:
-#          claimName: sshkey
+      - name: sshkey
+        secret:
+          secretName: ssh-key
 #      - name: scheduler-claim3
 #        persistentVolumeClaim:
 #          claimName: scheduler-claim3

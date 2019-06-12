@@ -3,27 +3,44 @@ kind: ConfigMap
 metadata:
   name: wait-script
 data:
-  nodepool.yaml: |-
+  wait-to-start.sh: |-
     #!/bin/bash
     
     # Zuul needs to be able to connect to the remote systems in order to
     # start.
-    
+    apk add mariadb-client curl git jq
+
     wait_for_mysql() {
         echo "Wait for mysql to start"
         for i in $(seq 1 120); do
-            cat < /dev/null > /dev/tcp/mysql/3306 && return
-            sleep 1
+            if nslookup zuul-db-mariadb; then
+                echo "Service resolved"
+            else
+                echo "Could not reslove service"
+                exit 3
+            fi
+
+            if nc -z -w5 zuul-db-mariadb 3306; then
+                echo "Socket is opened"
+            else
+                echo "Socket closed"
+                exit 2
+            fi
+
+            if mysql -h zuul-db-mariadb -u zuul -psecret -e exit; then
+                echo "Connected to mysql"
+                return 0
+            else
+                echo "Colud not connect to mysql. Host, username or password are wrong."
+                exit 4
+            fi
         done
-    
-        echo "Timeout waiting for mysql"
-        exit 1
     }
     
     wait_for_gerrit() {
-        echo "Wait for zuul user to be created"
+        echo "Wait for gerrit"
         for i in $(seq 1 120); do
-            [ $(curl -s -o /dev/null -w "%{http_code}" http://admin:secret@gerrit:8080/a/accounts/zuul/sshkeys) = "200" ] && return
+            [ $(curl -s -o /dev/null -w "%{http_code}" http://admin:secret@gerrit-http:8080/a/accounts/self) = "200" ] && return
             sleep 1
         done
     
@@ -31,5 +48,129 @@ data:
         exit 1
     }
     
+    gerritconfig() {
+        if [ `curl -s http://admin:secret@gerrit-http:8080/a/accounts/self/sshkeys | sed 1d | jq .[].ssh_public_key | wc -l` -eq 0 ]; then
+            curl -X POST http://admin:secret@gerrit-http:8080/a/accounts/self/sshkeys -H "Content-Type: plain/text" --data "`cat /var/ssh/admin.pub`"
+        else
+            seq_admin=`curl -s http://admin:secret@gerrit-http:8080/a/accounts/self/sshkeys | sed 1d | jq .[].seq`
+            curl -X DELETE http://admin:secret@gerrit-http:8080/a/accounts/self/sshkeys/$seq_admin
+            curl -X POST http://admin:secret@gerrit-http:8080/a/accounts/self/sshkeys -H "Content-Type: plain/text" --data "`cat /var/ssh/admin.pub`"
+        fi
+
+        if [ `curl -s http://admin:secret@gerrit-http:8080/a/accounts/zuul | sed 1d | jq .username | wc -l` -eq 0 ]; then
+            curl -X PUT http://admin:secret@gerrit-http:8080/a/accounts/zuul -H "Content-Type: application/json" --data '{"name":"Zuul","http_password":"secret","groups":["Non-Interactive Users"]}'
+            curl -X POST http://admin:secret@gerrit-http:8080/a/accounts/zuul/sshkeys -H "Content-Type: plain/text" --data "`cat /var/ssh/zuul.pub`"
+        else
+            seq_zuul=`curl -s http://admin:secret@gerrit-http:8080/a/accounts/zuul/sshkeys | sed 1d | jq .[].seq`
+            curl -X DELETE http://admin:secret@gerrit-http:8080/a/accounts/zuul/sshkeys/$seq_zuul
+            curl -X POST http://admin:secret@gerrit-http:8080/a/accounts/zuul/sshkeys -H "Content-Type: plain/text" --data "`cat /var/ssh/zuul.pub`"
+        fi
+
+        # All-Projects repo edit
+        git init /tmp/cfg
+        cd /tmp/cfg
+        git remote add origin http://admin:secret@gerrit-http:8080/a/All-Projects
+        git pull origin refs/meta/config
+
+        if diff /tmp/cfg/project.config /var/playbooks/project.config; then
+            echo "Configs are equal"
+        else
+            rm /tmp/cfg/project.config
+            cp /var/playbooks/project.config /tmp/cfg/project.config
+        fi
+ 
+        git config user.email 'admin@example.com'
+        git commit -a -m 'update config'
+        git push http://admin:secret@gerrit-http:8080/All-Projects HEAD:refs/meta/config
+
+    }
+
     wait_for_mysql
     wait_for_gerrit
+    gerritconfig
+  project.config: |-
+    [project]
+    	description = Access inherited by all other projects.
+    [receive]
+    	requireContributorAgreement = false
+    	requireSignedOffBy = false
+    	requireChangeId = true
+    	enableSignedPush = false
+    [submit]
+    	mergeContent = true
+    [capability]
+    	administrateServer = group Administrators
+    	priority = batch group Non-Interactive Users
+    	streamEvents = group Non-Interactive Users
+    [access "refs/*"]
+    	read = group Administrators
+    	read = group Anonymous Users
+    [access "refs/for/*"]
+    	addPatchSet = group Registered Users
+    	forgeAuthor = group Registered Users
+    	forgeCommitter = group Registered Users
+    [access "refs/for/refs/*"]
+    	push = group Registered Users
+    	pushMerge = group Registered Users
+    [access "refs/heads/*"]
+    	create = group Administrators
+    	create = group Project Owners
+    	forgeAuthor = group Registered Users
+    	forgeCommitter = group Administrators
+    	forgeCommitter = group Project Owners
+    	forgeCommitter = group Registered Users
+    	push = +force group Administrators
+    	push = group Project Owners
+    	label-Code-Review = -2..+2 group Registered Users
+    	label-Verified = -2..+2 group Administrators
+    	label-Verified = -2..+2 group Non-Interactive Users
+    	label-Workflow = -1..+1 group Registered Users
+    	submit = group Administrators
+    	submit = group Project Owners
+    	submit = group Non-Interactive Users
+    	editTopicName = +force group Administrators
+    	editTopicName = +force group Project Owners
+    [access "refs/meta/config"]
+    	exclusiveGroupPermissions = read
+    	read = group Administrators
+    	read = group Project Owners
+    	create = group Administrators
+    	create = group Project Owners
+    	push = group Administrators
+    	push = group Project Owners
+    	label-Code-Review = -2..+2 group Administrators
+    	label-Code-Review = -2..+2 group Project Owners
+    	submit = group Administrators
+    	submit = group Project Owners
+    [access "refs/tags/*"]
+    	create = group Administrators
+    	create = group Project Owners
+    	createTag = group Administrators
+    	createTag = group Project Owners
+    	createSignedTag = group Administrators
+    	createSignedTag = group Project Owners
+    [label "Code-Review"]
+    	function = MaxWithBlock
+    	defaultValue = 0
+    	copyMinScore = true
+    	copyAllScoresOnTrivialRebase = true
+    	value = -2 This shall not be merged
+    	value = -1 I would prefer this is not merged as is
+    	value =  0 No score
+    	value = +1 Looks good to me, but someone else must approve
+    	value = +2 Looks good to me, approved
+    [label "Verified"]
+    	function = MaxWithBlock
+    	value = -2 Fails
+    	value = -1 Does not seem to work
+    	value =  0 No score
+    	value = +1 Works for me
+    	value = +2 Verified
+    	defaultValue = 0
+    [label "Workflow"]
+    	function = MaxWithBlock
+    	value = -1 Work in progress
+    	value =  0 Ready for reviews
+    	value = +1 Approved
+    	defaultValue = 0
+

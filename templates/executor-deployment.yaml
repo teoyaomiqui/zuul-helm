@@ -36,8 +36,8 @@ spec:
           name: zuul-etc
 #        - mountPath: /var/playbooks/
 #          name: executor-claim1
-#        - mountPath: /var/ssh
-#          name: sshkey
+        - mountPath: /var/ssh
+          name: sshkey
 #        - mountPath: /srv/static/logs
 #          name: logs
       restartPolicy: Always
@@ -48,9 +48,9 @@ spec:
 #      - name: executor-claim1
 #        persistentVolumeClaim:
 #          claimName: executor-claim1
-#      - name: sshkey
-#        persistentVolumeClaim:
-#          claimName: sshkey
+      - name: sshkey
+        configMap:
+          name: ssh-key
 #      - name: logs
 #        persistentVolumeClaim:
 #          claimName: logs

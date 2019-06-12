@@ -26,7 +26,7 @@ data:
     start=true
     
     [zookeeper]
-    hosts=zk
+    hosts=zuul-zk-zookeeper
     
     [scheduler]
     tenant_config=/etc/zuul/main.yaml
@@ -34,11 +34,11 @@ data:
     [connection "gerrit"]
     name=gerrit
     driver=gerrit
-    server=gerrit
+    server=gerrit-ssh
     sshkey=/var/ssh/zuul
     user=zuul
     password=secret
-    baseurl=http://gerrit:8080
+    baseurl=http://gerrit-http:8080
     auth_type=basic
     
     [connection "opendev.org"]
@@ -49,7 +49,7 @@ data:
     [connection "mysql"]
     name=mysql
     driver=sql
-    dburi=mysql+pymysql://zuul:secret@mysql/zuul
+    dburi=mysql+pymysql://zuul:secret@zuul-db-mariadb/zuul
     
     [web]
     listen_address=0.0.0.0
