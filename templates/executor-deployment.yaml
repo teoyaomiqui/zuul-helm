@@ -1,12 +1,9 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  annotations:
-    kompose.cmd: kompose convert -f ../docker-compose.yaml
-    kompose.version: 1.18.0 (06a2e56)
   creationTimestamp: null
   labels:
-    io.kompose.service: executor
+    app: executor
   name: executor
 spec:
   replicas: 1
@@ -16,7 +13,7 @@ spec:
     metadata:
       creationTimestamp: null
       labels:
-        io.kompose.service: executor
+        app: executor
     spec:
       containers:
       - args:
