@@ -13,6 +13,4 @@ spec:
     nodePort: 30090
   selector:
     app: web
-  type: NodePort
-status:
-  loadBalancer: {}
+  type: LoadBalancer
