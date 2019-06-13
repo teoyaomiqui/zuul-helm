@@ -630,8 +630,17 @@ zookeeper:
     # nodeSelector: {"beta.kubernetes.io/arch": "amd64"}
     # tolerations: []
 config:
+  zuul: |-
+  main: |-
   ssh:
     zuul:
     zuulPub:
     admin:
     adminPub:
+  gerritHost: gerrit
+
+ingress:
+  enabled: false
+
+host_key:
+  enabled: false

@@ -7,38 +7,56 @@ metadata:
   name: executor
 spec:
   replicas: 1
-  strategy:
-    type: Recreate
   template:
     metadata:
       creationTimestamp: null
       labels:
         app: executor
     spec:
+      hostNetwork: True
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - executor
+            topologyKey: "kubernetes.io/hostname"
+      initContainers:
+      - image: ubuntu
+        name: init
+        args: ["bash", "-c", "cp /tmp/config/* /tmp/zuul; echo '' >> /tmp/zuul/zuul.conf; echo hostname=`hostname -I | cut -d ' ' -f 1` >> /tmp/zuul/zuul.conf"]
+        volumeMounts:
+        - mountPath: /tmp/config
+          name: zuul-etc
+        - mountPath: /tmp/zuul
+          name: tmp
       containers:
-      - args:
-        - zuul-executor
-        - -d
-#        env:
-#        - name: http_proxy
-#        - name: https_proxy
-#        - name: no_proxy
-#          value: ',gerrit,scheduler'
-        image: zuul/zuul-executor
+      - image: zuul/zuul-executor
         name: executor
+        args: ["sh", "-c", "mkdir -p /var/ssh; cp /mnt/* /var/ssh; chmod 0600 /var/ssh/*; mkdir -p /srv/static/logs; exec zuul-executor -d"]
         securityContext:
           privileged: true
         volumeMounts:
-        - mountPath: /etc/zuul/
-          name: zuul-etc
+        - mountPath: /etc/zuul
+          name: tmp
 #        - mountPath: /var/playbooks/
 #          name: executor-claim1
-        - mountPath: /var/ssh
+        - mountPath: /mnt
           name: sshkey
+        {{ if .Values.host_key.enabled }}
+        - mountPath: /root/.ssh
+          name: hostkey
+        {{ end }}
 #        - mountPath: /srv/static/logs
 #          name: logs
       restartPolicy: Always
       volumes:
+      volumes:
+      - name: tmp
+        emptyDir: {}
       - name: zuul-etc
         configMap:
           name: zuul-config
@@ -46,8 +64,13 @@ spec:
 #        persistentVolumeClaim:
 #          claimName: executor-claim1
       - name: sshkey
-        configMap:
-          name: ssh-key
+        secret:
+          secretName: ssh-key
+      {{ if .Values.host_key.enabled }}
+      - name: hostkey
+        secret:
+          secretName: host-key
+      {{ end }}
 #      - name: logs
 #        persistentVolumeClaim:
 #          claimName: logs

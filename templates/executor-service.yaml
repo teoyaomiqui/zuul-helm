@@ -3,13 +3,13 @@ kind: Service
 metadata:
   creationTimestamp: null
   labels:
-    app: web
-  name: web
+    app: executor
+  name: executor
 spec:
   ports:
-  - name: "9000"
-    port: 9000
-    targetPort: 9000
+  - name: "7900"
+    port: 7900
+    targetPort: 7900
   selector:
-    app: web
+    app: executor
   type: ClusterIP

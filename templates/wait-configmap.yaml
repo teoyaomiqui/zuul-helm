@@ -50,57 +50,7 @@ data:
         return 1
     }
     
-    wait_for_gerrit() {
-        echo "Wait for gerrit"
-        for i in $(seq 1 120); do
-            [ $(curl -s -o /dev/null -w "%{http_code}" http://admin:secret@gerrit-http:8080/a/accounts/self) = "200" ] && return
-            sleep 1
-        done
-    
-        echo "Timeout waiting for gerrit"
-        exit 1
-    }
-    
-    gerritconfig() {
-        if [ `curl -s http://admin:secret@gerrit-http:8080/a/accounts/self/sshkeys | sed 1d | jq .[].ssh_public_key | wc -l` -eq 0 ]; then
-            curl -X POST http://admin:secret@gerrit-http:8080/a/accounts/self/sshkeys -H "Content-Type: plain/text" --data "`cat /var/ssh/admin.pub`"
-        else
-            seq_admin=`curl -s http://admin:secret@gerrit-http:8080/a/accounts/self/sshkeys | sed 1d | jq .[].seq`
-            curl -X DELETE http://admin:secret@gerrit-http:8080/a/accounts/self/sshkeys/$seq_admin
-            curl -X POST http://admin:secret@gerrit-http:8080/a/accounts/self/sshkeys -H "Content-Type: plain/text" --data "`cat /var/ssh/admin.pub`"
-        fi
-
-        if [ `curl -s http://admin:secret@gerrit-http:8080/a/accounts/zuul | sed 1d | jq .username | wc -l` -eq 0 ]; then
-            curl -X PUT http://admin:secret@gerrit-http:8080/a/accounts/zuul -H "Content-Type: application/json" --data '{"name":"Zuul","http_password":"secret","groups":["Non-Interactive Users"]}'
-            curl -X POST http://admin:secret@gerrit-http:8080/a/accounts/zuul/sshkeys -H "Content-Type: plain/text" --data "`cat /var/ssh/zuul.pub`"
-        else
-            seq_zuul=`curl -s http://admin:secret@gerrit-http:8080/a/accounts/zuul/sshkeys | sed 1d | jq .[].seq`
-            curl -X DELETE http://admin:secret@gerrit-http:8080/a/accounts/zuul/sshkeys/$seq_zuul
-            curl -X POST http://admin:secret@gerrit-http:8080/a/accounts/zuul/sshkeys -H "Content-Type: plain/text" --data "`cat /var/ssh/zuul.pub`"
-        fi
-
-        # All-Projects repo edit
-        git init /tmp/cfg
-        cd /tmp/cfg
-        git remote add origin http://admin:secret@gerrit-http:8080/a/All-Projects
-        git pull origin refs/meta/config
-
-        if diff /tmp/cfg/project.config /var/playbooks/project.config; then
-            echo "Configs are equal"
-        else
-            rm /tmp/cfg/project.config
-            cp /var/playbooks/project.config /tmp/cfg/project.config
-        fi
- 
-        git config user.email 'admin@example.com'
-        git commit -a -m 'update config'
-        git push http://admin:secret@gerrit-http:8080/All-Projects HEAD:refs/meta/config
-
-    }
-
     wait_for_mysql
-    wait_for_gerrit
-    gerritconfig
   wait-for-scheduler-start.sh: |-
     wait_for_scheduler() {
     echo "Wait for mysql to start"
@@ -202,4 +152,3 @@ data:
     	value =  0 Ready for reviews
     	value = +1 Approved
     	defaultValue = 0
-

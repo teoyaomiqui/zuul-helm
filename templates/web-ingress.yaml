@@ -1,0 +1,21 @@
+{{ if .Values.ingress.enabled }}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: zuul-web
+spec:
+{{ if .Values.ingress.tls.enabled }}
+  tls:
+  - hosts:
+    - {{ .Values.ingress.canonicalName }}
+    secretName: {{ .Values.ingress.tls.secret }}
+{{ end }}
+  rules:
+  - host: {{ .Values.ingress.canonicalName }}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: web
+          servicePort: 9000
+{{end}}

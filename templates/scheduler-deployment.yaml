@@ -19,7 +19,7 @@ spec:
       - args:
         - sh
         - /var/playbooks/wait-to-start.sh
-        image: alpine
+        image: alpine:3.11.0
         name: init
         volumeMounts:
         - mountPath: /var/playbooks/
@@ -43,6 +43,10 @@ spec:
           name: zuul-etc
         - mountPath: /var/ssh
           name: sshkey
+        {{ if .Values.host_key.enabled }}
+        - mountPath: /root/.ssh
+          name: hostkey
+        {{ end }}
 #        - mountPath: /var/lib/zuul
 #          name: scheduler-claim3
       restartPolicy: Always
@@ -56,6 +60,11 @@ spec:
       - name: sshkey
         secret:
           secretName: ssh-key
+      {{ if .Values.host_key.enabled }}
+      - name: hostkey
+        secret:
+          secretName: host-key
+      {{ end }}
 #      - name: scheduler-claim3
 #        persistentVolumeClaim:
 #          claimName: scheduler-claim3
