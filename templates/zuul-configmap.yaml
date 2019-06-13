@@ -26,7 +26,7 @@ data:
     start=true
     
     [zookeeper]
-    hosts=zuul-zk-zookeeper
+    hosts=zookeeper
     
     [scheduler]
     tenant_config=/etc/zuul/main.yaml
@@ -49,7 +49,7 @@ data:
     [connection "mysql"]
     name=mysql
     driver=sql
-    dburi=mysql+pymysql://zuul:secret@zuul-db-mariadb/zuul
+    dburi=mysql+pymysql://zuul:secret@mariadb/zuul
     
     [web]
     listen_address=0.0.0.0

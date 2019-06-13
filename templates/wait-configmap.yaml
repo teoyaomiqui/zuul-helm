@@ -11,30 +11,43 @@ data:
     apk add mariadb-client curl git jq
 
     wait_for_mysql() {
-        echo "Wait for mysql to start"
+    echo "Wait for mysql to start"
         for i in $(seq 1 120); do
-            if nslookup zuul-db-mariadb; then
+            if nslookup mariadb; then
                 echo "Service resolved"
+                break
             else
                 echo "Could not reslove service"
-                exit 3
+                sleep 1
             fi
+        if [ $i -eq 120 ]; then
+          exit 1
+        fi
+        done
 
-            if nc -z -w5 zuul-db-mariadb 3306; then
+        for i in $(seq 1 120); do
+            if nc -z -w5 mariadb 3306; then
                 echo "Socket is opened"
+                break
             else
                 echo "Socket closed"
-                exit 2
+                sleep 1
             fi
+        if [ $i -eq 120 ]; then
+          exit 1
+        fi
+        done
 
-            if mysql -h zuul-db-mariadb -u zuul -psecret -e exit; then
+        for i in $(seq 1 120); do
+            if mysql -h mariadb -u zuul -psecret -e exit; then
                 echo "Connected to mysql"
                 return 0
             else
                 echo "Colud not connect to mysql. Host, username or password are wrong."
-                exit 4
+                sleep 1
             fi
         done
+        return 1
     }
     
     wait_for_gerrit() {
@@ -88,6 +101,22 @@ data:
     wait_for_mysql
     wait_for_gerrit
     gerritconfig
+  wait-for-scheduler-start.sh: |-
+    wait_for_scheduler() {
+    echo "Wait for mysql to start"
+        for i in $(seq 1 120); do
+            if nc -z -w5 scheduler 4730; then
+                echo "Socket is opened"
+                return 0
+            else
+                echo "Socket closed"
+                sleep 1
+            fi
+        done
+        return 1
+    }
+   
+    wait_for_scheduler 
   project.config: |-
     [project]
     	description = Access inherited by all other projects.
