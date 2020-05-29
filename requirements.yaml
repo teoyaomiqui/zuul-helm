@@ -1,7 +1,7 @@
 dependencies:
   - name: mariadb
-    version: 6.4.3
-    repository: https://kubernetes-charts.storage.googleapis.com/
+    version: 7.4.2
+    repository: https://charts.bitnami.com/bitnami
   - name: zookeeper
-    version: 3.0.3
+    version: 5.14.5
     repository: https://charts.bitnami.com/bitnami
